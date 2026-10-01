@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lux Desk</title>
+<style>
+:root{--bg:#05060a;--panel:#0a0c12;--line:#161a24;--tx:#d7dbe6;--mut:#6b7285;--up:#27e08a;--dn:#ff4d5e;--amb:#ff9f2e;--vio:#a65bff;--blu:#3d7bff;--pink:#ff3fa4}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--tx);font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{max-width:1180px;margin:0 auto;padding:0 0 24px}
+.top{display:flex;align-items:center;gap:18px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:8px;font:700 15px system-ui,sans-serif;letter-spacing:.04em}
+.logo i{width:20px;height:20px;border-radius:50%;background:#fff;display:inline-block}
+.logo small{display:block;font:500 8px monospace;color:var(--mut);letter-spacing:.14em}
+.kv{display:flex;flex-direction:column}.kv b{font:700 14px system-ui,sans-serif}.kv span{font-size:8px;color:var(--mut);letter-spacing:.12em}
+.sp{flex:1}
+.clock{font:700 20px system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.pill{border:1px solid #1d5c3b;color:var(--up);padding:4px 8px;border-radius:4px;font-size:9px;letter-spacing:.12em}
+.pill::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);margin-right:6px;animation:bl 1.4s infinite}
+@keyframes bl{50%{opacity:.2}}
+.ticker{border-bottom:1px solid var(--line);padding:6px 14px;color:var(--mut);white-space:nowrap;overflow:hidden;font-size:10px}
+.ticker .in{display:inline-block;animation:tk 60s linear infinite}
+@keyframes tk{to{transform:translateX(-50%)}}
+.ticker b{color:var(--tx)}.up{color:var(--up)}.dn{color:var(--dn)}
+.row{display:grid;gap:8px;padding:8px 8px 0}
+.r1{grid-template-columns:1fr 1.3fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;position:relative;overflow:hidden;min-width:0}
+.h{font-size:9px;letter-spacing:.14em;color:var(--mut);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.h b{color:var(--tx)}
+.big{font:700 38px system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.stats div b{display:block;font:700 15px system-ui,sans-serif}.stats div span{font-size:8px;color:var(--mut);letter-spacing:.1em}
+.bars{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.bar{height:4px;border-radius:2px;background:#161a24;position:relative;overflow:hidden}.bar i{position:absolute;top:0;bottom:0}
+.bl{display:flex;justify-content:space-between;font-size:8px;color:var(--mut);margin-bottom:2px}
+canvas{display:block;width:100%}
+#spec{height:150px}
+.orbit{margin:8px 8px 0;padding:0;height:380px}
+#orb{height:100%}
+.orbit .h{position:absolute;left:10px;right:10px;top:10px;z-index:2;pointer-events:none}
+.orbit .px{position:absolute;left:10px;top:34px;font:700 14px system-ui,sans-serif;z-index:2}
+.orbit .px2{position:absolute;right:12px;top:34px;font:700 14px system-ui,sans-serif;z-index:2;text-align:right}
+.agents{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:8px 8px 0}
+.ag{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;display:flex;gap:8px;align-items:center;transition:.25s;opacity:.6}
+.ag.on{opacity:1;border-color:var(--c);box-shadow:0 0 14px -4px var(--c)}
+.ag .ic{width:22px;height:22px;border-radius:50%;background:var(--c);flex:none;position:relative}
+.ag .ic::after{content:"";position:absolute;left:5px;top:7px;width:3px;height:6px;border-radius:2px;background:#000;box-shadow:8px 0 #000}
+.ag b{font:700 11px system-ui,sans-serif;letter-spacing:.06em;display:block}
+.ag span{font-size:8px;color:var(--mut);display:block}
+.ag .grp{font-size:7px;color:var(--mut);letter-spacing:.1em;margin-top:1px}
+.r3{grid-template-columns:1fr 1.25fr 1fr}
+#bal,#px{height:170px}
+.log{height:196px;overflow:hidden}
+.log div{display:grid;grid-template-columns:62px 52px 1fr auto;gap:6px;padding:2px 0;font-size:10px;white-space:nowrap;overflow:hidden;animation:in .4s}
+@keyframes in{from{opacity:0;transform:translateY(-6px)}}
+.log .a{font-weight:700}.log .t{color:var(--mut)}
+.note{padding:10px 14px 0;color:var(--mut);font-size:10px;line-height:1.5}
+/* backtest */
+.bt{margin:8px 8px 0}
+.ctl{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.ctl label{display:flex;flex-direction:column;gap:3px;font-size:8px;color:var(--mut);letter-spacing:.12em}
+.ctl input,.ctl select{background:#05060a;border:1px solid #232938;color:var(--tx);font:700 15px system-ui,sans-serif;padding:6px 8px;border-radius:4px;width:150px}
+.ctl .pre{display:flex;gap:4px}
+.ctl button{background:none;border:1px solid var(--line);color:var(--mut);padding:7px 8px;border-radius:3px;font:inherit;font-size:10px;cursor:pointer}
+.ctl button:hover{color:var(--tx);border-color:#3a4256}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.kp div{border:1px solid var(--line);border-radius:5px;padding:8px}
+.kp b{display:block;font:700 20px system-ui,sans-serif;font-variant-numeric:tabular-nums}.kp span{font-size:8px;color:var(--mut);letter-spacing:.1em}
+.kp small{display:block;font-size:9px;color:var(--mut);margin-top:2px}
+.btg{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+#btc{height:240px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font-size:8px;color:var(--mut);letter-spacing:.1em;text-align:right;font-weight:400;padding:3px 4px;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:4px;border-bottom:1px solid #10131b;font-variant-numeric:tabular-nums}
+@media(max-width:820px){
+ .r1,.r3,.btg{grid-template-columns:1fr}.agents{grid-template-columns:repeat(3,1fr)}.kp{grid-template-columns:repeat(2,1fr)}
+ .orbit{height:330px}.top{gap:10px}.big{font-size:32px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo"><i></i><div>LUX DESK<small>FOUR STRATEGIES · TWO TIMEFRAMES · SEVEN COINS · BINANCE</small></div></div>
+  <div class="kv"><b id="k_eq">—</b><span>VIRTUAL ACCOUNT · $10K START</span></div>
+  <div class="kv"><b id="k_ret">—</b><span>RETURN SINCE START</span></div>
+  <div class="kv"><b id="k_open">—</b><span>OPEN POSITIONS</span></div>
+  <div class="kv"><b id="k_bt">—</b><span>BACKTEST $10K · 2022→</span></div>
+  <div class="sp"></div>
+  <div class="kv"><div class="clock" id="clock">--:--:--</div><span>UTC</span></div>
+  <div class="pill">DEMO · PAPER ONLY</div>
+</div>
+<div class="ticker"><div class="in" id="tick"></div></div>
+
+<div class="row r1">
+  <div class="card">
+    <div class="h"><span>◆ SWARM PNL · <b>VIRTUAL $10K</b></span><span id="since">—</span></div>
+    <div class="big" id="pnl">—</div>
+    <div class="stats">
+      <div><b id="s_eq">—</b><span>EQUITY</span></div>
+      <div><b id="s_n">—</b><span>CLOSED TRADES</span></div>
+      <div><b id="s_wr">—</b><span>WIN RATE</span></div>
+      <div><b id="s_open">—</b><span>OPEN NOW</span></div>
+      <div><b id="s_risk">—</b><span>RISK / ENTRY</span></div>
+      <div><b id="s_pf">—</b><span>BACKTEST PF</span></div>
+    </div>
+    <div class="bars" id="bars"></div>
+  </div>
+  <div class="card">
+    <div class="h"><span>◆ SIGNAL SPECTROGRAM · NET POSITION × 7 COINS</span><span>LAST 60 × 4H · LONG ▮ SHORT ▮</span></div>
+    <canvas id="spec"></canvas>
+  </div>
+</div>
+
+<div class="card orbit">
+  <div class="h"><span>◆ THE ORBIT · ONE EYE · SEVEN COINS</span><span id="orbmeta">SCANNING</span></div>
+  <div class="px" id="orbL"></div><div class="px2" id="orbR"></div>
+  <canvas id="orb"></canvas>
+</div>
+
+<div class="agents" id="agents"></div>
+
+<div class="row r3">
+  <div class="card"><div class="h"><span>◆ BALANCE HISTORY · VIRTUAL $10K</span><b id="balv"></b></div><canvas id="bal"></canvas></div>
+  <div class="card"><div class="h"><span>◆ ACTIVITY LOG · SIX AGENTS</span><span>EVERY STEP</span></div><div class="log" id="log"></div></div>
+  <div class="card"><div class="h"><span>◆ BTC / USD · 4H</span><b id="pxv"></b></div><canvas id="px"></canvas></div>
+</div>
+
+<div class="card bt">
+  <div class="h"><span>◆ BACKTEST · 2022-01-01 → TODAY · COMPOUNDING</span><span id="btmeta">—</span></div>
+  <div class="ctl">
+    <label>YOUR DEPOSIT, $<input id="dep" type="number" min="100" step="100" value="10000"></label>
+    <div class="pre"><button data-d="1000">$1K</button><button data-d="10000">$10K</button><button data-d="50000">$50K</button><button data-d="100000">$100K</button></div>
+    <label>RISK PER ENTRY<select id="rsk"><option value="0.001">0.10 %</option><option value="0.0025" selected>0.25 % (our setup)</option><option value="0.005">0.50 %</option><option value="0.01">1.00 %</option></select></label>
+  </div>
+  <div class="kp">
+    <div><b id="b_fin">—</b><span>FINAL BALANCE · CLOSED TRADES</span><small id="b_fin2"></small></div>
+    <div><b id="b_ret">—</b><span>TOTAL RETURN</span><small id="b_cagr"></small></div>
+    <div><b id="b_dd">—</b><span>MAX DRAWDOWN · REALISED</span><small id="b_dd2"></small></div>
+    <div><b id="b_flat">—</b><span>SAME WITHOUT COMPOUNDING</span><small id="b_flat2"></small></div>
+  </div>
+  <div class="btg">
+    <div><canvas id="btc"></canvas></div>
+    <div><table id="yt"></table></div>
+  </div>
+  <div class="note" style="padding:8px 0 0">
+    Rules: four open LuxAlgo-style strategies (CUSUM, FVG positioning + EMA 200, S/R with breaks, statistical trailing stop) on 2h and 4h candles, BTC ETH SOL AVAX LINK DOGE NEAR.
+    Entry at the next open, stop 2×ATR, exit on the opposite signal, 0.12 % round-trip cost. Position risk = chosen % of the <b>realised</b> balance at entry; overlapping positions handled event by event.
+    Strategies and coins were selected on 2023-10…2026-09 data, so the 2022 part is a better out-of-sample check than the rest.
+    Big balances are theoretical: AVAX, LINK and NEAR cannot absorb that size. Results are rare-big-trend driven: win rate ≈ 23 %, drawdowns of 40–55 % happen every year.
+  </div>
+</div>
+
+<div class="note">
+  Virtual account: $10,000 started 2026-10-01 19:00 UTC, same rules as the backtest, paper only — no real money, not financial advice.
+  Live prices: Binance public data. Account state is refreshed from the demo observer.
+</div>
+
+<script>
+const COINS=['BTC','ETH','SOL','AVAX','LINK','DOGE','NEAR'];
+const CCOL={BTC:'#ff9f2e',ETH:'#7b8cff',SOL:'#a65bff',AVAX:'#ff4d5e',LINK:'#3d7bff',DOGE:'#f2c94c',NEAR:'#27d6c0'};
+const STR=['cusum','fvg_pos_avg_ema200','sr_breaks','stat_trailing'];
+const AG=[['CUSUM','#27e08a','change-point','STRATEGY'],['FVG · EMA200','#ff9f2e','gap + trend','STRATEGY'],['S/R BREAKS','#ff3fa4','level breakouts','STRATEGY'],['TRAIL STOP','#a65bff','stat. trailing stop','STRATEGY'],['2H DESK','#3d7bff','2-hour book','TIMEFRAME'],['4H DESK','#ff4d5e','4-hour book','TIMEFRAME']];
+let feed=null,bt=null,prices={},btcK=[],scan=0,stage=-1,logs=[],floaters=[],seen=new Set();
+const $=id=>document.getElementById(id);
+const fm=(x,d=2)=>x==null||isNaN(x)?'—':x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const usd=x=>{const a=Math.abs(x);return(x<0?'−':'')+'$'+(a>=1e7?fm(a/1e6,1)+'M':a>=1e6?fm(a/1e6,2)+'M':fm(a,a>=1000?0:2))};
+const pxf=(p)=>p==null?'—':(p>=100?fm(p,0):p>=1?fm(p,2):fm(p,4));
+let dpr=Math.min(2,window.devicePixelRatio||1);
+function fit(cv){const w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==w*dpr||cv.height!==h*dpr){cv.width=w*dpr;cv.height=h*dpr}return cv.getContext('2d')}
+const px=c=>prices[c]??(feed&&feed.prices[c]);
+
+// ---------- positions (live state of all pairs) ----------
+function posR(p){return(px(p.coin)-p.entry)*p.dir/p.risk}
+function coinNet(c){const L=feed.state.filter(p=>p.coin===c);return{long:L.filter(p=>p.dir>0).length,short:L.filter(p=>p.dir<0).length,n:L.length}}
+
+// ---------- virtual account panel ----------
+function fillAccount(){
+  if(!feed)return;const eq=feed.equity+feed.opens.reduce((s,o)=>s+(((px(o.coin)-o.entry)*o.dir/o.risk*o.size)-o.pnl),0),r=(eq/feed.deposit-1)*100;
+  $('k_eq').textContent=usd(eq);$('k_ret').innerHTML=`<span class="${r>=0?'up':'dn'}">${r>=0?'+':''}${fm(r,2)}%</span>`;
+  $('k_open').textContent=feed.opens.length;
+  $('pnl').innerHTML=`<span class="${eq>=feed.deposit?'up':'dn'}">${eq>=feed.deposit?'+':'−'}$${fm(Math.abs(eq-feed.deposit))}</span>`;
+  $('s_eq').textContent=usd(eq);$('s_n').textContent=feed.closed;$('s_wr').textContent=feed.closed?fm(feed.wins/feed.closed*100,1)+'%':'—';
+  $('s_open').textContent=feed.opens.length;$('s_risk').textContent=fm(feed.risk*100,2)+'%';
+  const d=new Date(feed.start*1000);$('since').textContent='SINCE '+d.toISOString().slice(0,16).replace('T',' ')+' UTC';
+  $('bars').innerHTML=COINS.map(c=>{const n=coinNet(c),t=Math.max(1,n.n);return`<div><div class="bl"><span>${c} · ${n.n} POSITIONS</span><span><span class="up">▲${n.long}</span> <span class="dn">▼${n.short}</span></span></div><div class="bar"><i style="left:0;width:${n.long/8*100}%;background:var(--up)"></i><i style="right:0;width:${n.short/8*100}%;background:var(--dn)"></i></div></div>`}).join('');
+  $('balv').textContent=usd(eq);drawBal(eq);
+}
+function drawBal(eq){
+  const cv=$('bal'),x=fit(cv),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
+  const pts=[[feed.start,feed.deposit],...feed.curve.filter(p=>p[0]>feed.start)];pts.push([Math.max(Math.floor(Date.now()/1000),feed.start+3600),eq]);
+  const v=pts.map(p=>p[1]),mn=Math.min(...v,feed.deposit*.995),mx=Math.max(...v,feed.deposit*1.005),pad=16*dpr;
+  const X=i=>i/(pts.length-1)*W,Y=y=>H-pad-(y-mn)/(mx-mn||1)*(H-2*pad);
+  x.setLineDash([3*dpr,4*dpr]);x.strokeStyle='#2b3142';x.beginPath();x.moveTo(0,Y(feed.deposit));x.lineTo(W,Y(feed.deposit));x.stroke();x.setLineDash([]);
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(39,224,138,.30)');g.addColorStop(1,'rgba(39,224,138,0)');
+  x.beginPath();v.forEach((y,i)=>i?x.lineTo(X(i),Y(y)):x.moveTo(X(i),Y(y)));x.strokeStyle='#27e08a';x.lineWidth=1.6*dpr;x.stroke();x.lineTo(W,H);x.lineTo(0,H);x.fillStyle=g;x.fill();
+  x.fillStyle='#6b7285';x.font=`${9*dpr}px monospace`;x.fillText('$'+fm(feed.deposit,0),4*dpr,Y(feed.deposit)-4*dpr);
+}
+
+// ---------- spectrogram ----------
+function drawSpec(){
+  if(!feed)return;const cv=$('spec'),x=fit(cv),W=cv.width,H=cv.height;x.fillStyle='#05060a';x.fillRect(0,0,W,H);
+  const rows=COINS.length,cols=60,cw=W/cols,rh=H/rows;
+  COINS.forEach((c,ri)=>{const a=feed.spec[c];a.forEach((v,i)=>{const k=Math.min(1,Math.abs(v)/6);
+    x.fillStyle=v===0?'#0e1119':v>0?`rgba(39,224,138,${.18+.8*k})`:`rgba(255,77,94,${.18+.8*k})`;x.fillRect(i*cw+1,ri*rh+1,cw-1,rh-1)});
+    x.fillStyle='rgba(255,255,255,.85)';x.font=`${9*dpr}px monospace`;x.fillText(c,4*dpr,ri*rh+rh*.7)});
+}
+
+// ---------- bt chart etc ----------
+async function tick(){
+  try{const r=await fetch('https://data-api.binance.vision/api/v3/ticker/price?symbols='+encodeURIComponent(JSON.stringify(COINS.map(c=>c+'USDT'))));
+    (await r.json()).forEach(o=>prices[o.symbol.replace('USDT','')]=+o.price)}catch(e){}
+  try{const r=await fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=50');btcK=(await r.json()).map(x=>({o:+x[1],h:+x[2],l:+x[3],c:+x[4]}))}catch(e){}
+  fillAccount();drawPx();ticker();
+}
+function drawPx(){
+  if(!btcK.length)return;const cv=$('px'),x=fit(cv),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
+  const k=btcK,hi=Math.max(...k.map(a=>a.h)),lo=Math.min(...k.map(a=>a.l)),cw=W/k.length,Y=v=>H-8*dpr-(v-lo)/(hi-lo||1)*(H-16*dpr);
+  k.forEach((a,i)=>{const up=a.c>=a.o,col=up?'#27e08a':'#ff4d5e',cx=i*cw+cw/2;x.strokeStyle=x.fillStyle=col;x.lineWidth=dpr;
+    x.beginPath();x.moveTo(cx,Y(a.h));x.lineTo(cx,Y(a.l));x.stroke();x.fillRect(cx-cw*.32,Y(Math.max(a.o,a.c)),cw*.64,Math.max(1.5*dpr,Math.abs(Y(a.o)-Y(a.c))))});
+  const d=(k.at(-1).c/k[0].c-1)*100;$('pxv').innerHTML=`$${fm(k.at(-1).c,0)} <span class="${d>=0?'up':'dn'}">${d>=0?'+':''}${fm(d,2)}%</span>`;
+}
+function ticker(){
+  if(!feed)return;const s=COINS.map(c=>{const n=coinNet(c);return`<b>${c}</b> ${pxf(px(c))} · <span class="up">▲${n.long}</span> <span class="dn">▼${n.short}</span>`}).join(' &nbsp;│&nbsp; ');
+  $('tick').innerHTML=(s+' &nbsp;│&nbsp; ').repeat(2);
+}
+
+// ---------- agents + log ----------
+$('agents').innerHTML=AG.map((a,i)=>`<div class="ag" id="ag${i}" style="--c:${a[1]}"><div class="ic"></div><div><b>${i+1} · ${a[0]}</b><span>${a[2]}</span><span class="grp">${a[3]}</span></div></div>`).join('');
+function addLog(a,kind,msg,val,cls){logs.unshift([a,kind,msg,val,cls]);logs=logs.slice(0,14);
+  $('log').innerHTML=logs.map(l=>`<div><span class="a" style="color:${AG[l[0]][1]}">${AG[l[0]][0].split(' ')[0]}</span><span class="t">${l[1]}</span><span>${l[2]}</span><span class="${l[4]||''}">${l[3]||''}</span></div>`).join('')}
+function ago(t){const h=(Date.now()/1000-t)/3600;return h<48?Math.round(h)+'h':Math.round(h/24)+'d'}
+function step(){
+  if(!feed)return;stage=(stage+1)%6;for(let i=0;i<6;i++)$('ag'+i).classList.toggle('on',i===stage);
+  const c=COINS[scan%7],i=stage;
+  if(i<4){const L=feed.state.filter(p=>p.coin===c&&p.strat===i);
+    if(!L.length)addLog(i,'SCAN',`${c} · no position on 2h / 4h`,'FLAT');
+    else{const p=L[Math.floor(Date.now()/1500)%L.length],R=posR(p);addLog(i,p.tf.toUpperCase(),`${c} ${p.dir>0?'LONG':'SHORT'} since ${ago(p.t)}`,(R>=0?'+':'')+fm(R,1)+'R',R>=0?'up':'dn')}}
+  else{const tf=i===4?'2h':'4h',L=feed.state.filter(p=>p.tf===tf),lg=L.filter(p=>p.dir>0).length,Rs=L.reduce((s,p)=>s+posR(p),0);
+    addLog(i,tf.toUpperCase(),`${L.length} positions · ▲${lg} ▼${L.length-lg}`,(Rs>=0?'+':'')+fm(Rs,1)+'R',Rs>=0?'up':'dn')}
+  if(i===5)scan++;
+}
+setInterval(step,1500);
+function checkNew(){ // новые закрытые сделки счёта → всплывающая подпись над монетой
+  if(!feed)return;feed.log.forEach(l=>{const k=l.t+l.coin+l.strat+l.tf;if(!seen.has(k)){if(seen.size)floaters.push({coin:l.coin,txt:(l.pnl>=0?'WIN +$':'LOSS −$')+fm(Math.abs(l.pnl)),col:l.pnl>=0?'#27e08a':'#ff4d5e',t:performance.now()});seen.add(k)}})}
+
+// ---------- orbit ----------
+const trails=[];for(let i=0;i<260;i++)trails.push({a:Math.random()*6.283,s:.15+Math.random()*.5,rx:.78+Math.random()*.4,ry:.7+Math.random()*.45,ph:Math.random()*6.283,c:COINS[i%7],o:.15+Math.random()*.35});
+let eye={x:0,y:0};const t0=performance.now();
+function orbit(now){
+  const cv=$('orb'),x=fit(cv),W=cv.width,H=cv.height,cx=W/2,cy=H*.54,RX=W*.36,RY=H*.27;x.clearRect(0,0,W,H);const t=(now-t0)/1000;
+  x.lineWidth=dpr*.8;
+  for(const p of trails){const a=p.a+t*p.s*.25,a2=a-.35;x.strokeStyle=CCOL[p.c];x.globalAlpha=p.o*(.6+.4*Math.sin(t*.7+p.ph));
+    x.beginPath();for(let k=0;k<=8;k++){const aa=a2+(a-a2)*k/8,wob=1+.04*Math.sin(aa*3+p.ph+t*.4);const X=cx+Math.cos(aa)*RX*p.rx*wob,Y=cy+Math.sin(aa)*RY*p.ry*wob+Math.sin(aa*5+t)*4*dpr;k?x.lineTo(X,Y):x.moveTo(X,Y)}x.stroke()}
+  x.globalAlpha=1;x.strokeStyle='rgba(255,63,164,.55)';x.lineWidth=1.5*dpr;x.beginPath();x.ellipse(cx,cy,RX*.82,RY*.82,0,0,7);x.stroke();
+  const n=7,pos=COINS.map((c,i)=>{const a=t*.12+i/n*6.283;return{c,X:cx+Math.cos(a)*RX,Y:cy+Math.sin(a)*RY}});
+  const sc=pos[scan%n];eye.x+=(sc.X-cx-eye.x)*.08;eye.y+=(sc.Y-cy-eye.y)*.08;
+  x.strokeStyle=CCOL[sc.c];x.globalAlpha=.55+.25*Math.sin(t*8);x.lineWidth=1.8*dpr;x.beginPath();x.moveTo(cx,cy);x.quadraticCurveTo((cx+sc.X)/2,(cy+sc.Y)/2-30*dpr,sc.X,sc.Y);x.stroke();x.globalAlpha=1;
+  pos.forEach(({c,X,Y})=>{const R=(c===sc.c?21:17)*dpr,col=CCOL[c],nt=feed?coinNet(c):{long:0,short:0};
+    const g=x.createRadialGradient(X,Y,R*.2,X,Y,R*2.2);g.addColorStop(0,col+'66');g.addColorStop(1,col+'00');x.fillStyle=g;x.beginPath();x.arc(X,Y,R*2.2,0,7);x.fill();
+    x.fillStyle=col;x.beginPath();x.arc(X,Y,R,0,7);x.fill();x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=dpr;x.beginPath();x.arc(X,Y,R*.78,0,7);x.stroke();
+    x.fillStyle='#000';x.font=`700 ${R*.6}px system-ui`;x.textAlign='center';x.textBaseline='middle';x.fillText(c,X,Y+1);
+    // кольцо чистого направления: зелёное — больше лонгов, красное — шортов
+    const net=nt.long-nt.short;if(net){x.strokeStyle=net>0?'#27e08a':'#ff4d5e';x.lineWidth=2*dpr;x.beginPath();x.arc(X,Y,R+4*dpr+Math.min(4,Math.abs(net))*dpr*.6*(1+.3*Math.sin(t*4)),0,7);x.stroke()}
+    x.fillStyle='#d7dbe6';x.font=`${9*dpr}px monospace`;x.fillText(pxf(px(c)),X,Y+R+11*dpr);
+    x.fillStyle='#6b7285';x.fillText(feed?`▲${nt.long} ▼${nt.short}`:'',X,Y+R+21*dpr);x.textAlign='left';x.textBaseline='alphabetic'});
+  const R0=Math.min(W,H)*.1,g=x.createRadialGradient(cx,cy,R0*.4,cx,cy,R0*1.9);g.addColorStop(0,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.beginPath();x.arc(cx,cy,R0*1.9,0,7);x.fill();
+  x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,R0,0,7);x.fill();
+  const ex=Math.max(-1,Math.min(1,eye.x/RX)),ey=Math.max(-1,Math.min(1,eye.y/RY)),bl=(Math.sin(t*1.3)>.985)?.2:1;x.fillStyle='#0a0a0a';
+  for(const dx of[-1,1]){const p=cx+dx*R0*.3+ex*R0*.22,q=cy-R0*.05+ey*R0*.2;x.save();x.translate(p,q);x.rotate(dx*.28);x.beginPath();x.roundRect(-R0*.07,-R0*.2*bl,R0*.14,R0*.4*bl,R0*.07);x.fill();x.restore()}
+  floaters=floaters.filter(f=>now-f.t<3500);
+  for(const f of floaters){const p=pos.find(q=>q.c===f.coin);if(!p)continue;const k=(now-f.t)/3500;x.globalAlpha=1-k;x.fillStyle=f.col;x.font=`700 ${12*dpr}px system-ui`;x.textAlign='center';x.fillText(f.txt,p.X,p.Y-30*dpr-k*22*dpr);x.textAlign='left'}
+  x.globalAlpha=1;
+  const nt=feed?coinNet(sc.c):{long:0,short:0};
+  $('orbL').innerHTML=`<span style="color:${CCOL[sc.c]}">${sc.c}</span> ${pxf(px(sc.c))}`;
+  $('orbR').innerHTML=feed?`<span class="up">▲${nt.long}</span> <span class="dn">▼${nt.short}</span>`:'';
+  $('orbmeta').textContent='SCANNING '+sc.c+' · HANDOFF '+(Math.max(stage,0)+1)+'/6';
+  requestAnimationFrame(orbit);
+}
+requestAnimationFrame(orbit);
+
+// ---------- backtest: event account with compounding (same logic as the research engine) ----------
+function simBt(dep,risk){
+  const T=bt.trades,ev=[];
+  T.forEach((r,i)=>{ev.push([r[1],r[1]===r[0]?2:0,i]);ev.push([r[0],1,i])});
+  ev.sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
+  let bal=dep,peak=dep,mdd=0,size=new Map(),curve=[[bt.t0,dep]],wins=0,n=0,sumR=0,gw=0,gl=0,yr={};
+  for(const [t,typ,i] of ev){const r=T[i];
+    if(typ===1){size.set(i,risk*bal)}
+    else{if(r[7])continue;const s=size.get(i);size.delete(i);const pnl=s*r[6];bal+=pnl;n++;sumR+=r[6];if(r[6]>0){wins++;gw+=r[6]}else gl-=r[6];
+      peak=Math.max(peak,bal);mdd=Math.max(mdd,1-bal/peak);curve.push([t,bal]);yr[new Date(t*1000).getUTCFullYear()]=bal}}
+  let unreal=0;size.forEach((s,i)=>{unreal+=s*T[i][8]});
+  return{bal,withOpen:bal+unreal,mdd,curve,n,wins,pf:gl?gw/gl:0,sumR,yr,flat:dep*(1+risk*sumR)};
+}
+function runBt(){
+  if(!bt)return;const dep=Math.max(100,+$('dep').value||10000),risk=+$('rsk').value,r=simBt(dep,risk);
+  const yrs=(bt.t_last-bt.t0)/31557600,ret=r.bal/dep-1,cagr=Math.pow(r.bal/dep,1/yrs)-1;
+  $('b_fin').textContent=usd(r.bal);$('b_fin2').textContent='with open positions: '+usd(r.withOpen);
+  $('b_ret').innerHTML=`<span class="${ret>=0?'up':'dn'}">${ret>=0?'+':''}${ret>=100?fm(ret*100,0):fm(ret*100,1)}%</span>`;$('b_cagr').textContent=`≈ ${fm(cagr*100,0)}% per year over ${fm(yrs,1)} years`;
+  $('b_dd').innerHTML=`<span class="dn">−${fm(r.mdd*100,1)}%</span>`;$('b_dd2').textContent=`${r.n} closed trades · win rate ${fm(r.wins/r.n*100,1)}% · PF ${fm(r.pf,2)}`;
+  $('b_flat').textContent=usd(r.flat);$('b_flat2').textContent=`compounding multiplies the result ×${fm(r.bal/r.flat,1)}`;
+  $('b_bt')&&0;$('k_bt').textContent=usd(simBt(10000,0.0025).bal);$('s_pf').textContent=fm(r.pf,2);
+  $('btmeta').textContent=`${r.n} CLOSED · ${bt.coins.length} COINS · 4 STRATEGIES × 2H+4H`;
+  // by year
+  let prev=dep;const ys=Object.keys(r.yr).sort(),rows=ys.map(y=>{const b=r.yr[y],g=b/prev-1;prev=b;return`<tr><td>${y}</td><td class="${g>=0?'up':'dn'}">${g>=0?'+':''}${fm(g*100,0)}%</td><td>${usd(b)}</td></tr>`}).join('');
+  $('yt').innerHTML=`<tr><th>YEAR</th><th>RETURN</th><th>BALANCE</th></tr>${rows}`;
+  // chart (log scale)
+  const cv=$('btc'),x=fit(cv),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
+  const c=r.curve,lo=Math.log(Math.min(...c.map(p=>p[1]))),hi=Math.log(Math.max(...c.map(p=>p[1]))),t0=c[0][0],t1=c.at(-1)[0],pad=14*dpr;
+  const X=t=>(t-t0)/(t1-t0)*W,Y=v=>H-pad-(Math.log(v)-lo)/(hi-lo||1)*(H-2*pad);
+  x.strokeStyle='#161a24';x.fillStyle='#6b7285';x.font=`${9*dpr}px monospace`;x.lineWidth=dpr;
+  for(let y=2022;y<=2026;y++){const t=Date.UTC(y,0,1)/1000;if(t<t0)continue;x.beginPath();x.moveTo(X(t),0);x.lineTo(X(t),H);x.stroke();x.fillText(y,X(t)+3*dpr,H-3*dpr)}
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(61,123,255,.32)');g.addColorStop(1,'rgba(61,123,255,0)');
+  x.beginPath();c.forEach((p,i)=>i?x.lineTo(X(p[0]),Y(p[1])):x.moveTo(X(p[0]),Y(p[1])));x.strokeStyle='#3d7bff';x.lineWidth=1.5*dpr;x.stroke();x.lineTo(W,H);x.lineTo(0,H);x.fillStyle=g;x.fill();
+  x.fillStyle='#6b7285';x.fillText('LOG SCALE · $'+fm(dep,0)+' → '+usd(r.bal),6*dpr,12*dpr);
+}
+$('dep').addEventListener('input',runBt);$('rsk').addEventListener('change',runBt);
+document.querySelectorAll('.pre button').forEach(b=>b.onclick=()=>{$('dep').value=b.dataset.d;runBt()});
+
+// ---------- wiring ----------
+setInterval(()=>$('clock').textContent=new Date().toISOString().slice(11,19),1000);
+async function loadFeed(){try{feed=await(await fetch('feed.json?'+Date.now())).json();checkNew();fillAccount();drawSpec();ticker()}catch(e){}}
+async function loadBt(){try{bt=await(await fetch('backtest.json?'+Date.now())).json();runBt()}catch(e){}}
+addEventListener('resize',()=>{fillAccount();drawSpec();drawPx();runBt()});
+loadFeed().then(tick);loadBt();setInterval(tick,15000);setInterval(loadFeed,60000);
+</script>
+</body>
+</html>
