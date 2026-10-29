@@ -88,7 +88,8 @@ def main():
             size[i] = RISK * bal
         else:
             pnl = size.pop(i) * live.Rnet[i]; bal += pnl
-            x = live.loc[i]; closed.append(dict(t=ts(x.t_out), coin=x.sym[:-4], strat=x.key, tf=x.tf, dir=int(x.dir), R=round(float(x.Rnet), 2), pnl=round(float(pnl), 2)))
+            x = live.loc[i]; closed.append(dict(t=ts(x.t_out), t_in=ts(x.t_in), coin=x.sym[:-4], strat=x.key, tf=x.tf, dir=int(x.dir), entry=float(x.entry),
+                                                exit=float(x.entry + x.dir * x.R * x.risk), R=round(float(x.Rnet), 2), pnl=round(float(pnl), 2)))
     curve, opens = [], []
     for h in grid:
         b = DEPOSIT
@@ -104,7 +105,7 @@ def main():
     state = [dict(coin=COINS[int(x.coin)], strat=int(x.strat), tf=x.tf, dir=int(x.dir), entry=float(x.entry), risk=float(x.risk), t=ts(x.t_in)) for x in cur.itertuples()]
     unreal = sum(o["pnl"] for o in opens)
     feed = dict(generated=gen, start=ts(LIVE_START), deposit=DEPOSIT, risk=RISK, balance=round(bal, 2), equity=round(bal + unreal, 2),
-                closed=len(closed), wins=sum(c["pnl"] > 0 for c in closed), open=len(opens), curve=curve[-800:], opens=opens, log=closed[-40:][::-1],
+                closed=len(closed), wins=sum(c["pnl"] > 0 for c in closed), open=len(opens), curve=curve[-800:], opens=opens, log=closed[-40:][::-1], history=closed[::-1],
                 state=state, spec=spec, spec_t=int(bars4[-1].tz_localize("UTC").timestamp()), last_t=int(last_t.timestamp()), prices={s[:-4]: last_px[s] for s in SYMS})
     (HERE / "feed.json").write_text(json.dumps(feed, separators=(",", ":")))
     print(f"live: balance {bal:,.2f} equity {bal+unreal:,.2f} closed {len(closed)} open {len(opens)} state {len(state)}")

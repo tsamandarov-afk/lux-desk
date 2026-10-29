@@ -69,6 +69,14 @@ canvas{display:block;width:100%}
 .kp b{display:block;font:700 20px system-ui,sans-serif;font-variant-numeric:tabular-nums}.kp span{font-size:8px;color:var(--mut);letter-spacing:.1em}
 .kp small{display:block;font-size:9px;color:var(--mut);margin-top:2px}
 .btg{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+.tr{margin:8px 8px 0}
+.tr .tw{max-height:420px;overflow:auto}
+.tr th{position:sticky;top:0;background:var(--panel)}
+.tr td,.tr th{white-space:nowrap}
+.tr td:nth-child(-n+3),.tr th:nth-child(-n+3){text-align:left}
+.tr .tabs{display:flex;gap:6px;margin-bottom:8px}
+.tr .tabs button{background:none;border:1px solid var(--line);color:var(--mut);padding:5px 10px;border-radius:3px;font:inherit;font-size:10px;letter-spacing:.1em;cursor:pointer}
+.tr .tabs button.on{color:var(--tx);border-color:#3a4256}
 #btc{height:240px}
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{font-size:8px;color:var(--mut);letter-spacing:.1em;text-align:right;font-weight:400;padding:3px 4px;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
@@ -124,6 +132,12 @@ td{text-align:right;padding:4px;border-bottom:1px solid #10131b;font-variant-num
   <div class="card"><div class="h"><span>◆ BALANCE HISTORY · VIRTUAL $10K</span><b id="balv"></b></div><canvas id="bal"></canvas></div>
   <div class="card"><div class="h"><span>◆ ACTIVITY LOG · SIX AGENTS</span><span>EVERY STEP</span></div><div class="log" id="log"></div></div>
   <div class="card"><div class="h"><span>◆ BTC / USD · 4H</span><b id="pxv"></b></div><canvas id="px"></canvas></div>
+</div>
+
+<div class="card tr">
+  <div class="h"><span>◆ TRADES · VIRTUAL ACCOUNT</span><span id="trmeta">—</span></div>
+  <div class="tabs"><button id="tabO" class="on">OPEN NOW</button><button id="tabC">CLOSED HISTORY</button></div>
+  <div class="tw"><table id="trt"></table></div>
 </div>
 
 <div class="card bt">
@@ -184,7 +198,7 @@ function fillAccount(){
   $('s_open').textContent=feed.opens.length;$('s_risk').textContent=fm(feed.risk*100,2)+'%';
   const d=new Date(feed.start*1000);$('since').textContent='SINCE '+d.toISOString().slice(0,16).replace('T',' ')+' UTC';
   $('bars').innerHTML=COINS.map(c=>{const n=coinNet(c),t=Math.max(1,n.n);return`<div><div class="bl"><span>${c} · ${n.n} POSITIONS</span><span><span class="up">▲${n.long}</span> <span class="dn">▼${n.short}</span></span></div><div class="bar"><i style="left:0;width:${n.long/8*100}%;background:var(--up)"></i><i style="right:0;width:${n.short/8*100}%;background:var(--dn)"></i></div></div>`}).join('');
-  $('balv').textContent=usd(eq);drawBal(eq);
+  $('balv').textContent=usd(eq);drawBal(eq);fillTrades();
 }
 function drawBal(eq){
   const cv=$('bal'),x=fit(cv),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
@@ -316,6 +330,30 @@ function runBt(){
 }
 $('dep').addEventListener('input',runBt);$('rsk').addEventListener('change',runBt);
 document.querySelectorAll('.pre button').forEach(b=>b.onclick=()=>{$('dep').value=b.dataset.d;runBt()});
+
+// ---------- trades table: open now / closed history ----------
+let trTab='o';
+const SN=['CUSUM','FVG·EMA200','S/R BREAKS','TRAIL STOP'];
+const dts=t=>new Date(t*1000).toISOString().slice(5,16).replace('T',' ');
+const sg=(v,s)=>`<td class="${v>=0?'up':'dn'}">${v>=0?'+':'−'}${s}</td>`;
+const dirc=d=>`<span class="${d>0?'up':'dn'}">${d>0?'▲ LONG':'▼ SHORT'}</span>`;
+function fillTrades(){
+  if(!feed)return;$('tabO').classList.toggle('on',trTab==='o');$('tabC').classList.toggle('on',trTab==='c');
+  if(trTab==='o'){
+    const L=feed.opens.slice().sort((a,b)=>b.t-a.t);
+    $('trmeta').textContent=L.length+' OPEN · FLOATING P/L LIVE';
+    $('trt').innerHTML='<tr><th>COIN</th><th>SIDE</th><th>STRATEGY · TF</th><th>OPENED (UTC)</th><th>ENTRY</th><th>PRICE</th><th>SIZE</th><th>R</th><th>P/L</th></tr>'+
+      (L.map(o=>{const p=px(o.coin),R=(p-o.entry)*o.dir/o.risk,pnl=o.size*R,si=STR.indexOf(o.strat);
+        return`<tr><td><b style="color:${CCOL[o.coin]}">${o.coin}</b></td><td>${dirc(o.dir)}</td><td>${SN[si]||o.strat} · ${o.tf.toUpperCase()}</td><td>${dts(o.t)}</td><td>${pxf(o.entry)}</td><td>${pxf(p)}</td><td>$${fm(o.size,0)}</td>${sg(R,fm(Math.abs(R),2)+'R')}${sg(pnl,'$'+fm(Math.abs(pnl)))}</tr>`}).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--mut)">no open positions</td></tr>');
+  }else{
+    const L=feed.history||feed.log;
+    $('trmeta').textContent=L.length+' CLOSED · '+feed.wins+' WINS';
+    $('trt').innerHTML='<tr><th>COIN</th><th>SIDE</th><th>STRATEGY · TF</th><th>OPENED (UTC)</th><th>CLOSED (UTC)</th><th>ENTRY</th><th>EXIT</th><th>R</th><th>P/L</th></tr>'+
+      (L.map(c=>{const si=STR.indexOf(c.strat);
+        return`<tr><td><b style="color:${CCOL[c.coin]}">${c.coin}</b></td><td>${dirc(c.dir)}</td><td>${SN[si]||c.strat} · ${c.tf.toUpperCase()}</td><td>${c.t_in?dts(c.t_in):'—'}</td><td>${dts(c.t)}</td><td>${c.entry?pxf(c.entry):'—'}</td><td>${c.exit?pxf(c.exit):'—'}</td>${sg(c.R,fm(Math.abs(c.R),2)+'R')}${sg(c.pnl,'$'+fm(Math.abs(c.pnl)))}</tr>`}).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--mut)">no closed trades yet</td></tr>');
+  }
+}
+$('tabO').onclick=()=>{trTab='o';fillTrades()};$('tabC').onclick=()=>{trTab='c';fillTrades()};
 
 // ---------- wiring ----------
 setInterval(()=>$('clock').textContent=new Date().toISOString().slice(11,19),1000);
